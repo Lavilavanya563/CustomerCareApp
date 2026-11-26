@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { supabase } from "./supabase";
 import "./App.css";
+import ReusableForm from "./ReusableForm";
 
 const API_URL = "http://localhost:5000";
 
@@ -853,16 +854,13 @@ if (page === "Payments") await loadOrders();
 
           {activePage === "Customers" && (
             <>
-              {(showCustomerForm || customerEditingId) && (
-  <section className="panel">
-                <div className="panel-heading">
-                  <div>
-                    <h2>{customerEditingId ? "Edit Customer" : "Add Customer"}</h2>
-                    <p>Add customer contact details below.</p>
-                  </div>
-                </div>
-
-                <form className="form-grid" onSubmit={handleCustomerSubmit}>
+            {(showCustomerForm || customerEditingId) && (
+  <ReusableForm
+    title={customerEditingId ? "Edit Customer" : "Add Customer"}
+    description="Add customer contact details below."
+    onSubmit={handleCustomerSubmit}
+    className="form-grid"
+  >
                   <div className="field">
 
                     <label htmlFor="customerName">Customer Name</label>
@@ -888,13 +886,13 @@ if (page === "Payments") await loadOrders();
 
                   <div className="form-actions">
                     <button className="primary-button" disabled={loading}>
-                   {loading
-  ? orderEditingId
+               {loading
+  ? customerEditingId
     ? "Updating..."
     : "Creating..."
-  : orderEditingId
-    ? "Update Order"
-    : "Create Order"}
+  : customerEditingId
+    ? "Update Customer"
+    : "Add Customer"}
                     </button>
                    
                     <button
@@ -911,9 +909,8 @@ if (page === "Payments") await loadOrders();
                     </button>
 
                   </div>
-                </form>
-              </section>
-              )}
+              </ReusableForm>
+)}
               <section className="panel">
               
 <div className="panel-heading">
@@ -1013,16 +1010,14 @@ if (page === "Payments") await loadOrders();
 
           {activePage === "Products" && (
             <>
-              {(showProductForm || productEditingId) && (
-  <section className="panel">
-                <div className="panel-heading">
-                  <div>
-                    <h2>{productEditingId ? "Edit Product" : "Add Product"}</h2>
-                    <p>Enter product details. Price is entered in rupees.</p>
-                  </div>
-                </div>
-
-                <form className="form-grid product-form" onSubmit={handleProductSubmit}>
+           {(showProductForm || productEditingId) && (
+  <ReusableForm
+    title={productEditingId ? "Edit Product" : "Add Product"}
+    description="Enter product details. Price is entered in rupees."
+    onSubmit={handleProductSubmit}
+    className="form-grid product-form"
+  >
+  
                   <div className="field">
                     <label htmlFor="sku">SKU *</label>
                     <input
@@ -1040,7 +1035,7 @@ if (page === "Payments") await loadOrders();
                       id="productName"
                       value={productName}
                       onChange={(e) => setProductName(e.target.value)}
-                      placeholder="Enter product name"
+                      placeholder="En ter product name"
                       required
                     />
                   </div>
@@ -1142,8 +1137,8 @@ if (page === "Payments") await loadOrders();
 )}
 
                   </div>
-                </form>
-              </section>
+                
+               </ReusableForm>
               )}
              <section className="panel">
   
@@ -1228,7 +1223,7 @@ if (page === "Payments") await loadOrders();
             </>
           )}
 
-         
+        
 
 
 {activePage === "Carts" && (
@@ -1266,13 +1261,13 @@ if (page === "Payments") await loadOrders();
 )}
 
     </div>
-
-   {showCartForm && (
- 
-<form
-  className="cart-create-form"
-  onSubmit={handleCreateCart}
->
+{showCartForm && (
+    <ReusableForm
+    title="Create Cart"
+    description="Select a customer to create a new cart."
+    onSubmit={handleCreateCart}
+    className="cart-create-form"
+  >
 
     <div className="field cart-customer-field">
       <label htmlFor="cart-customer">Select Customer</label>
@@ -1316,7 +1311,7 @@ if (page === "Payments") await loadOrders();
         Cancel
       </button>
     </div>
-  </form>
+  </ReusableForm>
 )}
 
     {cartMessage && <p>{cartMessage}</p>}
@@ -1570,9 +1565,13 @@ if (page === "Payments") await loadOrders();
   {showPaymentForm ? "Cancel" : "+ Add Payment"}
 </button>
       </div>
-
-      {showPaymentForm && (
-        <form className="form-grid" onSubmit={handlePaymentSubmit}>
+{showPaymentForm && (
+    <ReusableForm
+    title={paymentEditingId ? "Edit Payment" : "Add Payment"}
+    description="Enter payment details below."
+    onSubmit={handlePaymentSubmit}
+    className="form-grid"
+  >
           <div className="field">
             <label>Select Order *</label>
             <select
@@ -1654,7 +1653,7 @@ if (page === "Payments") await loadOrders();
               Cancel
             </button>
           </div>
-        </form>
+        </ReusableForm>
       )}
     </section>
 
@@ -1907,24 +1906,15 @@ if (page === "Payments") await loadOrders();
       </table>
     </div>
 
-    {/* Edit Order Form */}
-    {showOrderForm && (
-      <div className="orders-form-card">
-        <div className="panel-heading">
-          <h3>{orderEditingId ? "Edit Order" : "Add Order"}</h3>
-          <button
-            type="button"
-            className="secondary-button"
-            onClick={() => {
-              resetOrderForm();
-              setShowOrderForm(false);
-            }}
-          >
-            Cancel
-          </button>
-        </div>
+{/* Edit Order Form */}
+{showOrderForm && (
+  <ReusableForm
+    title={orderEditingId ? "Edit Order" : "Add Order"}
+    description="Enter order details below."
+    onSubmit={handleOrderSubmit}
+    className="form-grid"
+  >
 
-        <form className="form-grid" onSubmit={handleOrderSubmit}>
           <div className="field">
             <label>Customer</label>
             <select
@@ -2046,8 +2036,8 @@ if (page === "Payments") await loadOrders();
               Cancel
             </button>
           </div>
-        </form>
-      </div>
+        </ReusableForm>
+    
     )}
 
   </section>

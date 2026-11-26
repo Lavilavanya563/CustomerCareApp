@@ -955,6 +955,23 @@ raw_webhook_payload,
     if (!order_id) {
       return res.status(400).json({ error: "Order ID is required." });
     }
+    const { data: existingOrder, error: orderError } = await supabase
+  .from("orders")
+  .select("id")
+  .eq("id", order_id)
+  .maybeSingle();
+
+if (orderError) {
+  return res.status(500).json({
+    error: orderError.message
+  });
+}
+
+if (!existingOrder) {
+  return res.status(400).json({
+    error: "Order not found."
+  });
+}
 
     if (
       !Number.isSafeInteger(amount_paise) ||
@@ -1011,16 +1028,56 @@ const {
 } = req.body;
     const updates = {};
    
+const allowedFields = [
+  "order_id",
+  "amount_paise",
+  "status",
+  "razorpay_payment_id",
+  "razorpay_payment_link_id",
+  "raw_webhook_payload",
+  "verified_at"
+];
 
+const requestedFields = Object.keys(req.body);
+
+if (
+  requestedFields.length === 0 ||
+  requestedFields.some(field => !allowedFields.includes(field))
+) {
+  return res.status(400).json({
+    error: "Please provide valid payment details to update."
+  });
+}
 
     const allowedStatuses = ["created", "paid", "failed", "refunded"];
 
-    if (order_id !== undefined) {
-      if (!order_id) {
-        return res.status(400).json({ error: "Order ID is required." });
-      }
-      updates.order_id = order_id;
-    }
+  if (order_id !== undefined) {
+  if (typeof order_id !== "string" || !order_id.trim()) {
+    return res.status(400).json({
+      error: "Valid Order ID is required."
+    });
+  }
+
+  const { data: existingOrder, error: orderError } = await supabase
+    .from("orders")
+    .select("id")
+    .eq("id", order_id)
+    .maybeSingle();
+
+  if (orderError) {
+    return res.status(500).json({
+      error: orderError.message
+    });
+  }
+
+  if (!existingOrder) {
+    return res.status(400).json({
+      error: "Order not found."
+    });
+  }
+
+  updates.order_id = order_id;
+}
 
     if (amount_paise !== undefined) {
       if (
@@ -1048,7 +1105,13 @@ const {
     if (razorpay_payment_link_id !== undefined) {
       updates.razorpay_payment_link_id = razorpay_payment_link_id || null;
     }
+if (raw_webhook_payload !== undefined) {
+  updates.raw_webhook_payload = raw_webhook_payload;
+}
 
+if (verified_at !== undefined) {
+  updates.verified_at = verified_at;
+}
     if (Object.keys(updates).length === 0) {
       return res.status(400).json({
         error: "Provide at least one field to update.",
@@ -1110,12 +1173,35 @@ app.post("/orders", async (req, res) => {
       shipping_address = null,
     } = req.body;
 
-    // Validate required fields
-    if (!customer_id) {
-      return res.status(400).json({
-        error: "Customer is required.",
-      });
-    }
+  // Validate customer ID
+if (
+  typeof customer_id !== "string" ||
+  !customer_id.trim()
+) {
+  return res.status(400).json({
+    error: "Valid Customer ID is required.",
+  });
+}
+
+// Check whether customer exists
+const { data: existingCustomer, error: customerError } =
+  await supabase
+    .from("customers")
+    .select("id")
+    .eq("id", customer_id)
+    .maybeSingle();
+
+if (customerError) {
+  return res.status(500).json({
+    error: customerError.message,
+  });
+}
+
+if (!existingCustomer) {
+  return res.status(400).json({
+    error: "Customer not found.",
+  });
+}
 
     if (!Array.isArray(items) || items.length === 0) {
       return res.status(400).json({
@@ -1210,6 +1296,30 @@ app.patch("/orders/:id", async (req, res) => {
   try {
     console.log("PATCH ORDER ROUTE HIT");
     console.log("PATCH ORDER BODY:", req.body);
+    // Validate allowed fields
+const allowedFields = [
+  "customer_id",
+  "status",
+  "source",
+  "shipping_address",
+  "carrier",
+  "tracking_number",
+  "product_id",
+  "quantity"
+];
+
+const requestedFields = Object.keys(req.body);
+
+if (
+  requestedFields.length === 0 ||
+  requestedFields.some(
+    (field) => !allowedFields.includes(field)
+  )
+) {
+  return res.status(400).json({
+    error: "Please provide valid order details to update."
+  });
+}
     const {
       customer_id,
       status,
@@ -1316,19 +1426,89 @@ if (itemError) {
   return res.status(400).json({ error: itemError.message });
 }
     }
-    // Update other order details
-    const updateData = {};
+   // Update other order details
+const updateData = {};
+// Validate shipping fields
+// Validate shipping address
+if (
+  shipping_address !== undefined &&
+  shipping_address !== null &&
+  (
+    typeof shipping_address !== "object" ||
+    Array.isArray(shipping_address) ||
+    typeof shipping_address.address !== "string"
+  )
+) {
+  return res.status(400).json({
+    error: "Shipping address must contain a valid address."
+  });
+}
 
-    if (customer_id !== undefined) updateData.customer_id = customer_id;
-    if (status !== undefined) updateData.status = status;
-    if (source !== undefined) updateData.source = source;
-    if (shipping_address !== undefined) {
-      updateData.shipping_address = shipping_address;
-    }
-    if (carrier !== undefined) updateData.carrier = carrier;
-    if (tracking_number !== undefined) {
-      updateData.tracking_number = tracking_number;
-    }
+if (
+  carrier !== undefined &&
+  carrier !== null &&
+  typeof carrier !== "string"
+) {
+  return res.status(400).json({
+    error: "Carrier must be a string."
+  });
+}
+
+if (
+  tracking_number !== undefined &&
+  tracking_number !== null &&
+  typeof tracking_number !== "string"
+) {
+  return res.status(400).json({
+    error: "Tracking number must be a string."
+  });
+}
+// Validate customer ID
+if (customer_id !== undefined) {
+  if (
+    typeof customer_id !== "string" ||
+    !customer_id.trim()
+  ) {
+    return res.status(400).json({
+      error: "Valid Customer ID is required.",
+    });
+  }
+
+  // Check whether customer exists
+  const { data: existingCustomer, error: customerError } =
+    await supabase
+      .from("customers")
+      .select("id")
+      .eq("id", customer_id)
+      .maybeSingle();
+
+  if (customerError) {
+    return res.status(500).json({
+      error: customerError.message,
+    });
+  }
+
+  if (!existingCustomer) {
+    return res.status(400).json({
+      error: "Customer not found.",
+    });
+  }
+
+  updateData.customer_id = customer_id;
+}
+
+if (status !== undefined) updateData.status = status;
+if (source !== undefined) updateData.source = source;
+
+if (shipping_address !== undefined) {
+  updateData.shipping_address = shipping_address;
+}
+
+if (carrier !== undefined) updateData.carrier = carrier;
+
+if (tracking_number !== undefined) {
+  updateData.tracking_number = tracking_number;
+}
 
     if (Object.keys(updateData).length > 0) {
       const { error: updateError } = await supabase
@@ -1380,4 +1560,3 @@ console.log("Server file loaded completely");
 setInterval(() => {
   console.log("Backend is alive");
 }, 10000);
-
